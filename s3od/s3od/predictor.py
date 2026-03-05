@@ -30,10 +30,14 @@ class BackgroundRemoval:
         self,
         model_id: Optional[str] = None,
         image_size: int = 1024,
-        device: Optional[str] = None
+        device: Optional[str] = None,
+        CHECKPOINT_NAME: Optional[str] = None
     ):
         self.image_size = image_size
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+
+        if CHECKPOINT_NAME is not None:
+            self.DEFAULT_CHECKPOINT_NAME = CHECKPOINT_NAME
         
         model_id = model_id or self.DEFAULT_MODEL_ID
         self.model = self._load_model(model_id)
