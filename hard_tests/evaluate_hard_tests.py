@@ -93,7 +93,7 @@ def save_mask_rgba(output_dir: Path, rel_noext: Path, mask01: np.ndarray, rgba: 
     ensure_parent(rgba_path)
 
     mask_u8 = (np.clip(mask01, 0, 1) * 255).astype(np.uint8)
-    Image.fromarray(mask_u8, mode="L").save(mask_path)
+    Image.fromarray(mask_u8).convert("L").save(mask_path)
     rgba.save(rgba_path)
 
 def run_infer_s3od_to_outputs(
@@ -101,7 +101,7 @@ def run_infer_s3od_to_outputs(
     images_dir: str | Path,
     output_dir: str | Path = "outputs",
     threshold: float = 0.5,
-    use_refiner: bool = True,
+    use_refiner: bool = False,
     recursive: bool = True,
 ):
     images_dir = Path(images_dir)
@@ -385,6 +385,10 @@ def patched_preprocess_fixed(self, image):
 
 
 if __name__ == '__main__':
+    
+    # Set up device
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    
     # Change current directory to S3OD root for imports to work correctly
     # (assuming the script is run from S3OD root or path is adjusted)
     # if os.getcwd().split('/')[-1] != 'S3OD':
