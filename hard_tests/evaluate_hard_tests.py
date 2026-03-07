@@ -406,7 +406,7 @@ if __name__ == '__main__':
 
     # 1) Khởi tạo detector
     from s3od import BackgroundRemoval
-    detector = BackgroundRemoval(model_id="okupyn/s3od-dis", image_size=1024, device=device)
+    detector = BackgroundRemoval(model_id="okupyn/s3od", image_size=1024, device=device)
     detector._preprocess = patched_preprocess_fixed.__get__(detector, type(detector))
     print("Mô hình đã sẵn sàng.")
 
