@@ -385,59 +385,48 @@ def patched_preprocess_fixed(self, image):
 
 
 if __name__ == '__main__':
-    
-    # Set up device
+    # Thiết lập thiết bị
     device = "cuda" if torch.cuda.is_available() else "cpu"
     
-    # Change current directory to S3OD root for imports to work correctly
-    # (assuming the script is run from S3OD root or path is adjusted)
-    # if os.getcwd().split('/')[-1] != 'S3OD':
-    #     os.chdir('S3OD') # This would be problematic in a Colab environment if run outside the repo
+    # Tự động xác định các thư mục
+    current_dir = Path(__file__).resolve().parent 
+    repo_root = current_dir.parent
+    sys.path.insert(0, str(repo_root))
 
-    # repo_root = Path(".")  # assuming current directory is S3OD
-    # ckpt_path = "last_focal_iou_ssim.ckpt"
+    # Cấu hình đường dẫn đầu vào (Inputs)
+    images_dir = current_dir / "inputs" / "images"
+    gt_dir = current_dir / "inputs" / "masks" # Nơi chứa Ground Truth chuẩn
+    
+    # Cấu hình đường dẫn đầu ra (Outputs)
+    # output_infer_dir là "thư mục mẹ" của lần test này
+    output_infer_dir = current_dir / "outputs" / "MyTestDis"
+    
+    # pred_dir trỏ thẳng vào folder con chứa mask vừa tạo để tính metric
+    pred_dir = output_infer_dir / "masks" 
 
-    # images_dir = "datasets/DIS5K/DIS5K/DIS-TE1/im"
-    # gt_dir     = "datasets/DIS5K/DIS5K/DIS-TE1/gt"
-    # output_infer_dir = "outputs/DIS-TE1" # Output directory for inference results
-    # pred_dir   = output_infer_dir + "/masks" # Predictions for metrics are in the masks subfolder
-
-    # device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    # 1) Create detector and patch preprocess function
+    # 1) Khởi tạo detector
     from s3od import BackgroundRemoval
-    detector = BackgroundRemoval(model_id="okupyn/s3od", image_size=1024, device=device)
+    detector = BackgroundRemoval(model_id="okupyn/s3od-dis", image_size=1024, device=device)
     detector._preprocess = patched_preprocess_fixed.__get__(detector, type(detector))
-    print("Patched detector._preprocess OK.")
+    print("Mô hình đã sẵn sàng.")
 
-    # 2) Load local checkpoint into detector.model
-    # missing, unexpected = load_weights_into_background_removal(
-    #     detector,
-    #     ckpt_path=ckpt_path,
-    #     device=device,
-    #     strict=False,
-    # )
-    # print("missing weights:", len(missing), "unexpected weights:", len(unexpected))
+    # 2) Chạy inference (Bước này sẽ tạo ra folder /masks bên trong MyTest)
+    run_infer_s3od_to_outputs(
+        detector, 
+        images_dir=images_dir, 
+        output_dir=output_infer_dir,
+        use_refiner=False
+    )
 
-    # 3) Run inference and save outputs
-    # print(f"Running inference on images in {images_dir}")
-    # run_infer_s3od_to_outputs(
-    #     detector,
-    #     images_dir=images_dir,
-    #     output_dir=output_infer_dir,
-    #     threshold=0.5,
-    #     use_refiner=True,
-    # )
-
-    # 4) Compute and rank metrics
-    # print("\nComputing metrics...")
-    # metrics = compute_metrics_from_saved_preds(
-    #     repo_root=repo_root,
-    #     images_dir=images_dir,
-    #     gt_dir=gt_dir,
-    #     pred_dir=pred_dir,
-    #     device=device,
-    #     run_name="DIS-TE1_S3OD_FineTuned"
-    # )
-    # print("\nFinal Metrics:")
-    # print(metrics)
+    # 3) Tính toán metrics (Bước này đọc ảnh từ pred_dir để so với gt_dir)
+    print("\nĐang tính toán metrics...")
+    metrics = compute_metrics_from_saved_preds(
+        repo_root=repo_root,
+        images_dir=images_dir,
+        gt_dir=gt_dir,
+        pred_dir=pred_dir, # Trỏ đúng vào MyTest/masks
+        device=device,
+        run_name="MyTest_Hard_Cases"
+    )
+    print("\nKết quả:")
+    print(metrics)
